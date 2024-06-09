@@ -14,27 +14,27 @@ class FlashCard:
         self.definition = definition
         self.learned = learned
     def __str__(self):
-        return f"{self.term} : {self.definition}"
+        return f"{self.term} :: {self.definition}"
 
 class FlashCardSet:
     def __init__(self, topic):
         self.topic = topic
-        self.flashcards = []
+        self.flashcards = self.load_flashcards()
+        
 
     def load_flashcards(self):
         db_name = os.path.join(DATABASE_PATH, self.topic)
         cards = read_db_file(db_name)
-        for term, value in cards.items():
-            self.flashcards.append(FlashCard(term, value['definition'], value['learned']))
+        return [FlashCard(t, v['definition'], v['learned']) for t,v in cards.items()]
             
     def shuffle_cards(self):
         shuffle(self.flashcards)
 
     def sort_cards(self):
-        self.flashcards = sorted(self.flashcards, key= lambda x: x.term)
+        self.flashcards = sorted(self.flashcards, key= lambda x: x.term.lower())
 
     def details(self):
-        self.flashcards[0].learned = True
+        # self.flashcards[0].learned = True
         count = len(self.flashcards)
         learned = 0
         not_learned = 0
@@ -52,8 +52,9 @@ class FlashCardApp:
         self.topics= []
     def get_topics(self):
         files_list = os.listdir(DATABASE_PATH)
-        return files_list
+        self.topics =         [topic[:-4] for topic in files_list if topic[-3:] == 'dat']
         
+    
 
 
     def import_csv(self, csvfile_path, db_name= None):
@@ -70,12 +71,12 @@ class FlashCardApp:
 
     def export_csv(self, db_name, csvfile_path= None):
         if csvfile_path is None:
-            csvfile_path = FILES_PATH + db_name + '.csv'
+            csvfile_path = os.path.join(FILES_PATH , db_name + '.csv')
         write_csv_file(csvfile_path, read_db_file(db_name))
     
     def export_excel(self, db_name, excelfile_path= None):
         if excelfile_path is None:
-            excelfile_path = FILES_PATH + db_name + '.xlsx'
+            excelfile_path = os.path.join(FILES_PATH , db_name + '.xlsx')
         write_excel_file(excelfile_path, read_db_file(db_name))
 
     def __str__(self):
@@ -90,7 +91,6 @@ if __name__ == '__main__':
     # app.export_excel('database\\words', 'test.xlsx')
     # print(app.get_topics())
     f = FlashCardSet('english')
-    f.load_flashcards()
     f.shuffle_cards()
     f.sort_cards()
     print(f.details())
