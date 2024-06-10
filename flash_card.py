@@ -30,8 +30,8 @@ class FlashCardSet:
     def shuffle_cards(self):
         shuffle(self.flashcards)
 
-    def sort_cards(self):
-        self.flashcards = sorted(self.flashcards, key= lambda x: x.term.lower())
+    def sort_cards(self, reverse= False):
+        self.flashcards = sorted(self.flashcards, key= lambda x: x.term.lower(), reverse= reverse)
 
     def details(self):
         # self.flashcards[0].learned = True
