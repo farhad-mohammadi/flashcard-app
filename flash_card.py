@@ -20,30 +20,35 @@ class FlashCardSet:
     def __init__(self, topic):
         self.topic = topic
         self.flashcards = self.load_flashcards()
+        self.learned_flashcards = []
+        self.not_learned_flashcards = []
         
-
-    def load_flashcards(self):
+    def load_flashcards(self, ask_definition= False):
         db_name = os.path.join(DATABASE_PATH, self.topic)
         cards = read_db_file(db_name)
-        return [FlashCard(t, v['definition'], v['learned']) for t,v in cards.items()]
-            
+        if not ask_definition:
+            return [FlashCard(t, v['definition'], v['learned']) for t,v in cards.items()]
+        else:
+            return [FlashCard(v['definition'], t, v['learned']) for t,v in cards.items()]
+
     def shuffle_cards(self):
         shuffle(self.flashcards)
 
     def sort_cards(self, reverse= False):
         self.flashcards = sorted(self.flashcards, key= lambda x: x.term.lower(), reverse= reverse)
 
-    def details(self):
-        # self.flashcards[0].learned = True
-        count = len(self.flashcards)
-        learned = 0
-        not_learned = 0
+    def separate_cards(self):
+        self.learned_flashcards = []
+        self.not_learned_flashcards = []
         for card in self.flashcards:
             if card.learned:
-                learned+= 1
+                self.learned_flashcards.append(card)
             else:
-                not_learned+= 1
-        return count, learned, not_learned
+                self.not_learned_flashcards.append(card)
+            
+    def details(self):
+        return len(self.flashcards), len(self.learned_flashcards), len(self.not_learned_flashcards)
+    
     def __str__(self):
         return self.topic
 
@@ -93,6 +98,6 @@ if __name__ == '__main__':
     f = FlashCardSet('english')
     f.shuffle_cards()
     f.sort_cards()
-    print(f.details())
+    print(f.seprate_cards())
     for i in f.flashcards[:10]:
         print(i)
