@@ -1,7 +1,7 @@
 from random import shuffle
-from csv_files import write_csv_file, read_csv_file
-from excel_files import write_excel_file, read_excel_file
-from db_files import write_db_file, read_db_file
+from utils.csv_files import write_csv_file, read_csv_file
+from utils.excel_files import write_excel_file, read_excel_file
+from utils.db_files import write_db_file, read_db_file
 import os
 
 base_dir = os.path.dirname(__file__)
@@ -59,9 +59,6 @@ class FlashCardApp:
         files_list = os.listdir(DATABASE_PATH)
         self.topics =         [topic[:-4] for topic in files_list if topic[-3:] == 'dat']
         
-    
-
-
     def import_csv(self, csvfile_path, db_name= None):
         if db_name is None:
             db_name = os.path.splitext(os.path.basename(csvfile_path))[0]
@@ -86,18 +83,3 @@ class FlashCardApp:
 
     def __str__(self):
         return "Flash Card application"
-
-if __name__ == '__main__':
-    app = FlashCardApp()
-    # app.import_csv('files\\words.csv', 'database\\فارسی')
-    # app.export_csv('farhad')
-    # app.export_excel('database\\farhad', 'text.xlsx')
-    # app.import_excel("files\\words.xlsx")
-    # app.export_excel('database\\words', 'test.xlsx')
-    # print(app.get_topics())
-    f = FlashCardSet('english')
-    f.shuffle_cards()
-    f.sort_cards()
-    print(f.seprate_cards())
-    for i in f.flashcards[:10]:
-        print(i)
