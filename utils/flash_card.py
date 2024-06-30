@@ -14,22 +14,28 @@ class FlashCard:
         self.definition = definition
         self.learned = learned
     def __str__(self):
-        return f"{self.term} :: {self.definition}"
+        return f"{self.term} : {self.definition}"
 
 class FlashCardSet:
-    def __init__(self, topic):
-        self.topic = topic
-        self.flashcards = self.load_flashcards()
+    def __init__(self):
         self.learned_flashcards = []
         self.not_learned_flashcards = []
-        
-    def load_flashcards(self, ask_definition= False):
-        db_name = os.path.join(DATABASE_PATH, self.topic)
+        self.flashcards = []
+        self.terms = []
+
+    def load_flashcards(self, topic, ask_definition= False):
+        db_name = os.path.join(DATABASE_PATH, topic)
         cards = read_db_file(db_name)
         if not ask_definition:
-            return [FlashCard(t, v['definition'], v['learned']) for t,v in cards.items()]
+            self.flashcards = [FlashCard(t, v['definition'], v['learned']) for t,v in cards.items()]
         else:
-            return [FlashCard(v['definition'], t, v['learned']) for t,v in cards.items()]
+            self.flashcards = [FlashCard(v['definition'], t, v['learned']) for t,v in cards.items()]
+        self.terms = list(cards.keys())
+        self.separate_cards()
+        return self.flashcards
+    
+    def add_card(self, card):
+        self.flashcards.append(FlashCard(**card))
 
     def shuffle_cards(self):
         shuffle(self.flashcards)
@@ -55,10 +61,19 @@ class FlashCardSet:
 class FlashCardApp:
     def __init__(self):
         self.topics= []
+        self.get_topics()
+        self.flashcard_set = FlashCardSet()
     def get_topics(self):
         files_list = os.listdir(DATABASE_PATH)
         self.topics =         [topic[:-4] for topic in files_list if topic[-3:] == 'dat']
         
+    def set_flashcard_set(self, topic, ask_definitions= False):
+        self.flashcard_set.load_flashcards(topic, ask_definition= False)
+        
+    def make_new_topic(self, topic_name):
+        db_name = os.path.join(DATABASE_PATH, topic_name)
+        write_db_file(db_name, {})
+
     def import_csv(self, csvfile_path, db_name= None):
         if db_name is None:
             db_name = os.path.splitext(os.path.basename(csvfile_path))[0]
@@ -83,3 +98,4 @@ class FlashCardApp:
 
     def __str__(self):
         return "Flash Card application"
+
