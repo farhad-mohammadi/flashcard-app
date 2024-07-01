@@ -1,9 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
-from os import path
+from utils.config import FONT_PATH
 import arabic_reshaper
 from bidi.algorithm import get_display
-
-font_path = path.join(path.dirname(__file__), 'fonts\\tahoma.ttf')
 
 def create_text_image(text, image_size=(600, 450), text_percentage= (0.9, 0.9), dark_mode= False):
     if dark_mode:
@@ -18,7 +16,7 @@ def create_text_image(text, image_size=(600, 450), text_percentage= (0.9, 0.9), 
     bidi_text = get_display(reshaped_text)
     text = bidi_text
     font_size = calculate_font_size(text, image_size, text_percentage)
-    font = ImageFont.truetype(font_path, font_size)
+    font = ImageFont.truetype(FONT_PATH, font_size)
     text_bbox = draw.textbbox((0, 0), text, font=font)
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
@@ -30,7 +28,7 @@ def calculate_font_size(text, image_size, text_percentage, max_font_size=150):
     target_width = image_size[0] * text_percentage[0]
     target_height = image_size[1] * text_percentage[1]
     for font_size in range(max_font_size, 0, -1):
-        font = ImageFont.truetype(font_path, font_size)
+        font = ImageFont.truetype(FONT_PATH, font_size)
         draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
         text_bbox = draw.textbbox((0, 0), text, font=font)
         text_width = text_bbox[2] - text_bbox[0]

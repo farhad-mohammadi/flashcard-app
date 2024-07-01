@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QToolBar, QMenu, QDialog, QMessageBox,
     QLabel, QCheckBox, QPushButton, QWidget, QTextEdit, QLineEdit,
-    QVBoxLayout, QHBoxLayout, QListWidget
+    QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QUrl
@@ -33,7 +33,10 @@ class TopicsWindow(QMainWindow):
         self.export_menu.addAction(export_excel_action)
         self.new_topic_action = QAction('New Topic', self)
         self.new_topic_action.triggered.connect(self.get_new_topic)
+        self.delete_topic_action = QAction('Delete Topic')
+        self.delete_topic_action.triggered.connect(self.delete_topic)
         file_menu.addAction(self.new_topic_action)
+        file_menu.addAction(self.delete_topic_action)
         # Terms Menu Actions
         self.add_action = QAction("Add", self)
         self.add_action.triggered.connect(self.get_new_data)
@@ -92,8 +95,8 @@ class TopicsWindow(QMainWindow):
         context_menu = QMenu(self)
         context_menu.addMenu(self.import_menu)
         context_menu.addMenu(self.export_menu)
-        context_menu.addAction(self.add_action)
-        context_menu.addAction(self.delete_action)
+        context_menu.addAction(self.new_topic_action)
+        context_menu.addAction(self.delete_topic_action)
         context_menu.addAction(self.edit_action)
         # show menu
         context_menu.exec(self.topics_list.mapToGlobal(position))
@@ -102,13 +105,34 @@ class TopicsWindow(QMainWindow):
         self.new_topic_dialog = NewTopic(self)
         if self.new_topic_dialog.exec() == QDialog.DialogCode.Accepted:
             new_topic = self.new_topic_dialog.get_data()
-            print(new_topic)
+            self.flashcard_app.make_new_topic(new_topic)
+            new_item = QListWidgetItem(new_topic)
+            self.topics_list.addItem(new_item)
+            self.mark_load_cards(new_item)
+
 
     def get_new_data(self):
         self.new_data_dialog = NewData(self)
         if self.new_data_dialog.exec() == QDialog.DialogCode.Accepted:
             new_term, new_definition= self.new_data_dialog.get_data()
-            print(new_term, new_definition)
+            self.flashcard_app.flashcard_set.add_card(
+                {'term': new_term,
+                'definition': new_definition,
+                'learned': False}
+            )
+            self.flashcard_app.flashcard_set.sort_cards()
+            terms = [t.term for t in self.flashcard_app.flashcard_set.flashcards]
+            self.terms_list.clear()
+            self.terms_list.addItems(terms)
+
+    def delete_topic(self):
+        selected_item = self.topics_list.currentItem()
+        if selected_item:
+            if '✓ ' in selected_item.text():
+                selected_item.setText(selected_item.text().replace('✓ ', ''))
+                self.terms_list.clear()
+            self.flashcard_app.delete_flashcard_set(selected_item.text())
+            self.topics_list.takeItem(self.topics_list.row(selected_item))
 
     def play_effect(self, sound):
         winsound.PlaySound(sound, winsound.SND_ASYNC | winsound.SND_ALIAS )
