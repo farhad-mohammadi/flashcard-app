@@ -1,7 +1,7 @@
 from random import shuffle
 from utils.csv_files import write_csv_file, read_csv_file
 from utils.excel_files import write_excel_file, read_excel_file
-from utils.db_files import write_db_file, read_db_file, delete_data_from_db_file, delete_db_file
+from utils.db_files import write_db_file, read_db_file, delete_data_from_db_file, delete_db_file, edit_db_file
 import os
 from utils.config import DATABASE_PATH, FILES_PATH
 
@@ -40,9 +40,16 @@ class FlashCardSet:
         write_db_file(self.db_name, {card.term: {'definition': card.definition, 'learned': card.learned}})
 
     def delete_card(self, card):
-        card = FlashCard(**card)
+        if not isinstance(card, FlashCard):
+            card = FlashCard(**card)
         self.flashcards.remove(card)
         delete_data_from_db_file(self.db_name, card.term)
+
+    def find_card(self, term):
+        for card in self.flashcards:
+            if card.term == term :
+                return card
+
     def shuffle_cards(self):
         shuffle(self.flashcards)
 
@@ -84,6 +91,11 @@ class FlashCardApp:
         db_name = os.path.join(DATABASE_PATH, topic)
         delete_db_file(db_name)
         
+    def edit_flashcard_set(self, old_topic, new_topic):
+        old_topic = os.path.join(DATABASE_PATH, old_topic)
+        new_topic = os.path.join(DATABASE_PATH, new_topic)
+        edit_db_file(old_topic, new_topic)
+
     def import_csv(self, csvfile_path, db_name= None):
         if db_name is None:
             db_name = os.path.splitext(os.path.basename(csvfile_path))[0]

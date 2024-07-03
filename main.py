@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QAction, QImage, QPixmap
 from PyQt6.QtCore import Qt
 from utils.flash_card import FlashCard, FlashCardSet, FlashCardApp
-from utils.text_in_image import create_text_image
+from utils.text_into_image import create_text_image
 from topics_form import TopicsWindow
 from PIL import ImageQt
 
@@ -42,7 +42,9 @@ class MainWindow(QMainWindow):
         toolbar.addAction(about_action)
         # Image 
         self.image_label = QLabel()
-        self.image_label.setFixedSize(300, 240)
+        width = 700
+        height = width * 9 // 16
+        self.image_label.setFixedSize(width, height)
         self.image_label.setStatusTip("Image display area")
     
         # Read-Only Edit Box

@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QToolBar, QMenu, QDialog, QMessageBox,
     QLabel, QCheckBox, QPushButton, QWidget, QTextEdit, QLineEdit,
-    QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem
+    QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QFileDialog
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt, QUrl
 import winsound
+from os import path
 from utils.flash_card import FlashCard, FlashCardSet, FlashCardApp
+from utils.config import DATABASE_PATH
 
 class TopicsWindow(QMainWindow):
     def __init__(self, flashcard_app):
@@ -16,42 +18,38 @@ class TopicsWindow(QMainWindow):
         menu = self.menuBar()
         file_menu = menu.addMenu("&File")
         terms_menu = menu.addMenu("&Terms")
-        # File Menu Submenus
-        self.import_menu = QMenu("Import", self)
-        self.export_menu = QMenu("Export", self)
-        file_menu.addMenu(self.import_menu)
-        file_menu.addMenu(self.export_menu)
         # Import Actions
-        import_csv_action = QAction("Import CSV", self)
-        import_excel_action = QAction("Import Excel", self)
-        self.import_menu.addAction(import_csv_action)
-        self.import_menu.addAction(import_excel_action)
+        self.import_file_action = QAction("Import", self)
+        self.import_file_action.triggered.connect(self.import_file)
         # Export Actions
-        export_csv_action = QAction("Export CSV", self)
-        export_excel_action = QAction("Export Excel", self)
-        self.export_menu.addAction(export_csv_action)
-        self.export_menu.addAction(export_excel_action)
+        self.export_file_action = QAction("Export", self)
+        self.export_file_action.triggered.connect(self.export_file)
         self.new_topic_action = QAction('New Topic', self)
-        self.new_topic_action.triggered.connect(self.get_new_topic)
+        self.new_topic_action.triggered.connect(self.new_topic)
         self.delete_topic_action = QAction('Delete Topic')
         self.delete_topic_action.triggered.connect(self.delete_topic)
+        self.edit_topic_action = QAction('Edit Topic')
+        self.edit_topic_action.triggered.connect(self.edit_topic)
+        file_menu.addAction(self.import_file_action)
+        file_menu.addAction(self.export_file_action)
         file_menu.addAction(self.new_topic_action)
         file_menu.addAction(self.delete_topic_action)
+        file_menu.addAction(self.edit_topic_action)
         # Terms Menu Actions
         self.add_action = QAction("Add", self)
-        self.add_action.triggered.connect(self.get_new_data)
+        self.add_action.triggered.connect(self.new_data)
         self.delete_action = QAction("Delete", self)
+        self.delete_action.triggered.connect(self.delete_data)
         self.edit_action = QAction("Edit", self)
+        self.edit_action.triggered.connect(self.edit_data)
         terms_menu.addAction(self.add_action)
         terms_menu.addAction(self.delete_action)
         terms_menu.addAction(self.edit_action)
         # Toolbar
         toolbar = QToolBar("My main toolbar")
         self.addToolBar(toolbar)
-        toolbar.addAction(import_csv_action)
-        toolbar.addAction(import_excel_action)
-        toolbar.addAction(export_csv_action)
-        toolbar.addAction(export_excel_action)
+        toolbar.addAction(self.import_file_action)
+        toolbar.addAction(self.export_file_action)
         toolbar.addAction(self.add_action)
         toolbar.addAction(self.delete_action)
         toolbar.addAction(self.edit_action)
@@ -60,9 +58,10 @@ class TopicsWindow(QMainWindow):
         self.topics_list.itemActivated.connect(self.mark_load_cards)
         self.active_topic = None
         self.topics_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.topics_list.customContextMenuRequested.connect(self.topics_list_show_context_menu)
+        self.topics_list.customContextMenuRequested.connect(self.topics_list_show_menu)
         self.terms_list = QListWidget()
         self.terms_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.terms_list.customContextMenuRequested.connect(self.terms_list_show_menu)
         # List Layout
         list_layout = QHBoxLayout()
         list_layout.addWidget(self.topics_list)
@@ -74,6 +73,7 @@ class TopicsWindow(QMainWindow):
         # start app
         self.load_topics()
     def load_topics(self):
+        self.topics_list.clear()
         self.topics_list.addItems([topic for topic in self.flashcard_app.topics])
 
     def mark_load_cards(self, current):
@@ -91,18 +91,26 @@ class TopicsWindow(QMainWindow):
         self.terms_list.addItems(terms)
         self.play_effect('sounds\\checked.wav')
 
-    def topics_list_show_context_menu(self, position):
+    def topics_list_show_menu(self, position):
         context_menu = QMenu(self)
-        context_menu.addMenu(self.import_menu)
-        context_menu.addMenu(self.export_menu)
+        context_menu.addAction(self.import_file_action)
+        context_menu.addSeparator(self.export_file_action)
         context_menu.addAction(self.new_topic_action)
         context_menu.addAction(self.delete_topic_action)
+        context_menu.addAction(self.edit_topic_action)
+        # show menu
+        context_menu.exec(self.topics_list.mapToGlobal(position))
+
+    def terms_list_show_menu(self, position):
+        context_menu = QMenu(self)
+        context_menu.addAction(self.add_action)
+        context_menu.addAction(self.delete_action)
         context_menu.addAction(self.edit_action)
         # show menu
         context_menu.exec(self.topics_list.mapToGlobal(position))
 
-    def get_new_topic(self):
-        self.new_topic_dialog = NewTopic(self)
+    def new_topic(self):
+        self.new_topic_dialog = NewTopic(self, title= 'New Topic')
         if self.new_topic_dialog.exec() == QDialog.DialogCode.Accepted:
             new_topic = self.new_topic_dialog.get_data()
             self.flashcard_app.make_new_topic(new_topic)
@@ -110,9 +118,31 @@ class TopicsWindow(QMainWindow):
             self.topics_list.addItem(new_item)
             self.mark_load_cards(new_item)
 
+    def edit_topic(self):
+        selected_item = self.topics_list.currentItem()
+        if selected_item:
+            checked = False
+            if '✓ ' in selected_item.text():
+                checked = True
+                selected_item.setText(selected_item.text().replace('✓ ', ''))
+            self.new_topic_dialog = NewTopic(parent= self, title= 'Edit Topic', old_topic= selected_item.text())
+            if self.new_topic_dialog.exec() == QDialog.DialogCode.Accepted:
+                new_topic = self.new_topic_dialog.get_data()
+                self.flashcard_app.edit_flashcard_set(selected_item.text(), new_topic)
+                selected_item.setText(new_topic)
+                if checked:
+                    self.mark_load_cards(selected_item)
+    def delete_topic(self):
+        selected_item = self.topics_list.currentItem()
+        if selected_item:
+            if '✓ ' in selected_item.text():
+                selected_item.setText(selected_item.text().replace('✓ ', ''))
+                self.terms_list.clear()
+            self.flashcard_app.delete_flashcard_set(selected_item.text())
+            self.topics_list.takeItem(self.topics_list.row(selected_item))
 
-    def get_new_data(self):
-        self.new_data_dialog = NewData(self)
+    def new_data(self):
+        self.new_data_dialog = NewData(parent= self, title= 'New Data')
         if self.new_data_dialog.exec() == QDialog.DialogCode.Accepted:
             new_term, new_definition= self.new_data_dialog.get_data()
             self.flashcard_app.flashcard_set.add_card(
@@ -125,17 +155,62 @@ class TopicsWindow(QMainWindow):
             self.terms_list.clear()
             self.terms_list.addItems(terms)
 
-    def delete_topic(self):
-        selected_item = self.topics_list.currentItem()
+
+
+    def edit_data(self):
+        selected_item = self.terms_list.currentItem()
         if selected_item:
-            if '✓ ' in selected_item.text():
-                selected_item.setText(selected_item.text().replace('✓ ', ''))
-                self.terms_list.clear()
-            self.flashcard_app.delete_flashcard_set(selected_item.text())
-            self.topics_list.takeItem(self.topics_list.row(selected_item))
+            card = self.flashcard_app.flashcard_set.find_card(selected_item.text())
+            self.edit_term_dialog = NewData(parent= self, title= 'Edit Data', old_term= card.term, old_definition= card.definition)
+            if self.edit_term_dialog .exec() == QDialog.DialogCode.Accepted:
+                new_term, new_definition = self.edit_term_dialog.get_data()
+                self.flashcard_app.flashcard_set.delete_card(card)
+                self.flashcard_app.flashcard_set.add_card(
+                    {
+                        'term': new_term,
+                        'definition': new_definition,
+                        'learned': False
+                    }
+                )
+                selected_item.setText(new_term)
+
+    def delete_data(self):
+        selected_item = self.terms_list.currentItem()
+        if selected_item:
+            card  = self.flashcard_app.flashcard_set.find_card(selected_item.text())
+            self.flashcard_app.flashcard_set.delete_card(card)
+            self.terms_list.takeItem(self.terms_list.row(selected_item))
 
     def play_effect(self, sound):
         winsound.PlaySound(sound, winsound.SND_ASYNC | winsound.SND_ALIAS )
+
+    def import_file(self, filename):
+        filter = 'Excel Files (*.xlsx *.csv)'
+        file_name, _ = QFileDialog.getOpenFileName(filter=filter)
+        if file_name:
+            _, ext = path.splitext(file_name)
+            if ext == '.xlsx':
+                self.flashcard_app.import_excel(file_name)
+            else:
+                self.flashcard_app.import_csv(file_name)
+            self.load_topics()
+
+    def export_file(self):
+        selected_item = self.topics_list.currentItem()
+        if selected_item:
+            topic = selected_item.text()
+            if '✓ ' in topic:
+                topic = topic.replace('✓ ', '')
+            db_name = path.join(DATABASE_PATH, topic)
+            sujjestion = topic
+            filter = 'CSV Files (*.csv);;Excel Files (*.xlsx)'
+            filename, _ = QFileDialog.getSaveFileName(self, "Save File", sujjestion, filter)
+            if filename:
+                _, ext = path.splitext(filename)
+                if ext == '.xlsx':
+                    self.flashcard_app.export_excel(db_name= db_name, excelfile_path= filename)
+                else:
+                    self.flashcard_app.export_csv(db_name= db_name, csvfile_path= filename)
 
     def closeEvent(self, event):
         if hasattr(self, 'new_topic_dialog'):
@@ -145,13 +220,14 @@ class TopicsWindow(QMainWindow):
         event.accept()
 
 class NewTopic(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, title, old_topic= '', parent=None):
         super().__init__()
-        self.setWindowTitle('New Topic')
+        self.setWindowTitle(title)
         self.flashcard_app = parent.flashcard_app
         self.topic_lable = QLabel('Topic name :')
         self.topic_edit = QLineEdit()
         self.topic_edit.setAccessibleName(self.topic_lable.text())
+        self.topic_edit.setText(old_topic)
         self.topic_edit.textChanged.connect(self.enable_ok_btn)
         topic_layout = QHBoxLayout()
         topic_layout.addWidget(self.topic_lable)
@@ -160,7 +236,8 @@ class NewTopic(QDialog):
         self.cancel_btn = QPushButton('Cancel')
         self.cancel_btn.clicked.connect(self.reject)
         self.ok_btn = QPushButton('Ok')
-        self.ok_btn.setDisabled(True)
+        if not old_topic:
+            self.ok_btn.setDisabled(True)
         self.ok_btn.clicked.connect(self.accepted_data)
         btn_layout = QHBoxLayout()
         btn_layout.addWidget(self.cancel_btn)
@@ -189,14 +266,16 @@ class NewTopic(QDialog):
         return self.topic_edit.text()
 
 class NewData(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, title, old_term= '', old_definition='', old_learned= '', parent=None):
         super().__init__()
-        self.setWindowTitle('New Data')
+        self.editing = False if not old_term else True
+        self.setWindowTitle(title)
         self.flashcard_app = parent.flashcard_app
         self.term_lable = QLabel('Term :')
         self.term_edit = QTextEdit()
         self.term_edit.setAccessibleName(self.term_lable.text())
         self.term_edit.setTabChangesFocus(True)
+        self.term_edit.setPlainText(old_term)
         self.term_edit.textChanged.connect(self.enable_ok_btn)
         term_layout = QHBoxLayout()
         term_layout.addWidget(self.term_lable)
@@ -205,6 +284,7 @@ class NewData(QDialog):
         self.definition_lable = QLabel('Definition :')
         self.definition_edit = QTextEdit()
         self.definition_edit.setAccessibleName(self.definition_lable.text())
+        self.definition_edit.setPlainText(old_definition)
         self.definition_edit.setTabChangesFocus(True)
         definition_layout = QHBoxLayout()
         definition_layout.addWidget(self.definition_lable)
@@ -213,7 +293,8 @@ class NewData(QDialog):
         self.cancel_btn = QPushButton('Cancel')
         self.cancel_btn.clicked.connect(self.reject)
         self.ok_btn = QPushButton('Ok')
-        self.ok_btn.setDisabled(True)
+        if not old_term:
+            self.ok_btn.setDisabled(True)
         self.ok_btn.clicked.connect(self.accepted_data)
         btn_layout = QHBoxLayout()
         btn_layout.addWidget(self.cancel_btn)
@@ -230,7 +311,7 @@ class NewData(QDialog):
         self.ok_btn.setEnabled(bool(self.term_edit.toPlainText()))
 
     def accepted_data(self):
-        if self.term_edit.toPlainText() in self.flashcard_app.flashcard_set.terms:
+        if not self.editing and self.term_edit.toPlainText() in self.flashcard_app.flashcard_set.terms:
             msg = QMessageBox(self)
             msg.setWindowTitle('Duplicate term')
             msg.setText('The entered term is duplicate!')

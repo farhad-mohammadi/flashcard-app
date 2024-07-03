@@ -23,6 +23,10 @@ def delete_db_file(filename):
     for ext in ['.dir', '.dat', '.bak']:
         if os.path.exists(filename +ext):
             os.remove(filename + ext)
+def edit_db_file(old_filename, new_filename):
+    for ext in ['.dir', '.dat', '.bak']:
+        if os.path.exists(old_filename +ext):
+            os.rename(old_filename + ext, new_filename + ext)
 
 if __name__ == '__main__':
     # import csv_files
