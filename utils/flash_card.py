@@ -11,7 +11,7 @@ class FlashCard:
         self.definition = definition
         self.learned = learned
     def __str__(self):
-        return f"{self.term} : {self.definition}"
+        return f"{self.term} : {self.definition} : {self.learned}"
 
 class FlashCardSet:
     def __init__(self):
@@ -33,6 +33,9 @@ class FlashCardSet:
         self.terms = list(cards.keys())
         self.separate_cards()
         return self.flashcards
+    
+    def to_dict(self):
+        return {c.term : {'definition': c.definition, 'learned': c.learned} for c in self.flashcards}
     
     def add_card(self, card):
         card = FlashCard(**card)
@@ -76,25 +79,56 @@ class FlashCardApp:
         self.topics= []
         self.get_topics()
         self.flashcard_set = FlashCardSet()
+        self.active_topic = None
+        self.active_card = None
+        self.active_card_pos = 0
+
     def get_topics(self):
         files_list = os.listdir(DATABASE_PATH)
         self.topics =         [topic[:-4] for topic in files_list if topic[-3:] == 'dat']
         
     def set_flashcard_set(self, topic, ask_definitions= False):
         self.flashcard_set.load_flashcards(topic, ask_definition= False)
+        self.active_topic = topic
+        self.active_card = None
+        self.active_card_pos = 0
         
-    def make_new_topic(self, topic_name):
-        db_name = os.path.join(DATABASE_PATH, topic_name)
+    def next_card(self):
+        self.active_card_pos += 1
+        if self.active_card_pos < len(self.flashcard_set.not_learned_flashcards) :
+            self.active_card = self.flashcard_set.not_learned_flashcards[self.active_card_pos]
+            return self.active_card, len(self.flashcard_set.not_learned_flashcards) - self.active_card_pos -1
+
+    def previous_card(self):
+        self.active_card_pos -= 1
+        if self.active_card_pos >= 0:
+            self.active_card = self.flashcard_set.not_learned_flashcards[self.active_card_pos]
+            return self.active_card, self.active_card_pos
+
+
+    def make_new_topic(self, topic):
+        db_name = os.path.join(DATABASE_PATH, topic)
+        self.active_topic =  topic
+        self.active_card = None
+        self.active_card_pos = 0
         write_db_file(db_name, {})
 
     def delete_flashcard_set(self, topic):
         db_name = os.path.join(DATABASE_PATH, topic)
+        self.active_topic = None
+        self.active_card = None
+        self.active_card_pos = 0
         delete_db_file(db_name)
         
     def edit_flashcard_set(self, old_topic, new_topic):
-        old_topic = os.path.join(DATABASE_PATH, old_topic)
-        new_topic = os.path.join(DATABASE_PATH, new_topic)
-        edit_db_file(old_topic, new_topic)
+        old_db_name = os.path.join(DATABASE_PATH, old_topic)
+        new_db_name = os.path.join(DATABASE_PATH, new_topic)
+        edit_db_file(old_db_name, new_db_name)
+        self.set_flashcard_set(new_topic, ask_definitions= False)
+
+    def save_flashcard_set(self):
+        db_name = os.path.join(DATABASE_PATH, self.active_topic)
+        write_db_file(db_name, self.flashcard_set.to_dict())
 
     def import_csv(self, csvfile_path, db_name= None):
         if db_name is None:

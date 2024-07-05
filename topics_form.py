@@ -10,6 +10,7 @@ from os import path
 from utils.flash_card import FlashCard, FlashCardSet, FlashCardApp
 from utils.config import DATABASE_PATH
 
+
 class TopicsWindow(QMainWindow):
     def __init__(self, flashcard_app):
         super().__init__()
@@ -72,6 +73,11 @@ class TopicsWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         # start app
         self.load_topics()
+        if self.flashcard_app.active_topic :
+            item = self.topics_list.findItems(self.flashcard_app.active_topic, Qt.MatchFlag.MatchExactly)
+            if item:
+                self.mark_load_cards(item[0])
+
     def load_topics(self):
         self.topics_list.clear()
         self.topics_list.addItems([topic for topic in self.flashcard_app.topics])
@@ -84,17 +90,22 @@ class TopicsWindow(QMainWindow):
         if '✓ ' in topic: return
         self.active_topic = current
         current.setText(f"✓ {topic}")
+        if self.flashcard_app.active_topic :
+            self.flashcard_app.save_flashcard_set()
         self.flashcard_app.set_flashcard_set(topic, ask_definitions= False)
         self.flashcard_app.flashcard_set.sort_cards()
         terms = [t.term for t in self.flashcard_app.flashcard_set.flashcards]
         self.terms_list.clear()
         self.terms_list.addItems(terms)
+        self.flashcard_app.set_flashcard_set(topic)
+        self.flashcard_app.initialize()
+        self.topics_list.setCurrentItem(current)
         self.play_effect('sounds\\checked.wav')
 
     def topics_list_show_menu(self, position):
         context_menu = QMenu(self)
         context_menu.addAction(self.import_file_action)
-        context_menu.addSeparator(self.export_file_action)
+        context_menu.addAction(self.export_file_action)
         context_menu.addAction(self.new_topic_action)
         context_menu.addAction(self.delete_topic_action)
         context_menu.addAction(self.edit_topic_action)
@@ -110,7 +121,7 @@ class TopicsWindow(QMainWindow):
         context_menu.exec(self.topics_list.mapToGlobal(position))
 
     def new_topic(self):
-        self.new_topic_dialog = NewTopic(self, title= 'New Topic')
+        self.new_topic_dialog = NewTopic(parent= self, title= 'New Topic')
         if self.new_topic_dialog.exec() == QDialog.DialogCode.Accepted:
             new_topic = self.new_topic_dialog.get_data()
             self.flashcard_app.make_new_topic(new_topic)

@@ -3,7 +3,7 @@ from utils.config import FONT_PATH
 import arabic_reshaper
 from bidi.algorithm import get_display
 
-def create_text_image(text, image_size=(1600, 900), text_percentage= (0.9, 0.9), dark_mode= False):
+def create_text_image(text, image_size=(800, 450), text_percentage= (1, 1), dark_mode= False):
     if dark_mode:
         background_color = 'black'
         font_color = 'yellow'
