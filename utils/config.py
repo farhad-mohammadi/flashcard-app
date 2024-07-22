@@ -6,6 +6,9 @@ DATABASE_PATH = os.path.join(base_dir, 'database')
 FILES_PATH = os.path.join(base_dir, 'files')
 FONT_PATH = os.path.join(base_dir, 'fonts\\tahoma.ttf')
 INI_PATH = os.path.join(base_dir, 'data\\sett.ini')
+DEFAULT_SCHEME_PATH = '.\\utils\\sounds\\default\\'
+ALTERNATIVE_SCHEME_PATH = '.\\utils\\sounds\\alternative\\'
+CUSTOM_SCHEME_PATH = '.\\utils\\sounds\\custom\\'
 
 def read_config():
     if not os.path.exists(INI_PATH):

@@ -3,49 +3,60 @@ from PyQt6.QtWidgets import (
     QLabel, QCheckBox, QPushButton, QWidget, QTextEdit, QLineEdit,
     QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QFileDialog
 )
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtCore import Qt, QUrl
-import winsound
 from os import path
 from utils.flash_card import FlashCard, FlashCardSet, FlashCardApp
-from utils.config import DATABASE_PATH
-
+from utils.config import DATABASE_PATH, DEFAULT_SCHEME_PATH
+from utils.sound import sound
 
 class TopicsWindow(QMainWindow):
     def __init__(self, flashcard_app):
         super().__init__()
+
+        self.sound_path = DEFAULT_SCHEME_PATH
+        self.flag_list_check = False
+        self.flag_terms_list = False
+        self.flag_topic_list = False
         self.flashcard_app = flashcard_app
+        #actiongroup for sounds
+        self.soundgroup = QActionGroup (self)
+        self.soundgroup.triggered.connect (self.scheme)
         # Menu
         menu = self.menuBar()
-        file_menu = menu.addMenu("&File")
-        terms_menu = menu.addMenu("&Terms")
+        self.file_menu = menu.addMenu("&File")
+        self.terms_menu = menu.addMenu("&Terms")
         # Import Actions
-        self.import_file_action = QAction("Import", self)
+        self.import_file_action = QAction("Import", self.soundgroup)
         self.import_file_action.triggered.connect(self.import_file)
         # Export Actions
-        self.export_file_action = QAction("Export", self)
+        self.export_file_action = QAction("Export", self.soundgroup)
         self.export_file_action.triggered.connect(self.export_file)
-        self.new_topic_action = QAction('New Topic', self)
+        self.new_topic_action = QAction('New Topic', self.soundgroup)
         self.new_topic_action.triggered.connect(self.new_topic)
-        self.delete_topic_action = QAction('Delete Topic')
+        self.delete_topic_action = QAction('Delete Topic', self.soundgroup)
         self.delete_topic_action.triggered.connect(self.delete_topic)
-        self.edit_topic_action = QAction('Edit Topic')
+        self.edit_topic_action = QAction('Edit Topic', self.soundgroup)
         self.edit_topic_action.triggered.connect(self.edit_topic)
-        file_menu.addAction(self.import_file_action)
-        file_menu.addAction(self.export_file_action)
-        file_menu.addAction(self.new_topic_action)
-        file_menu.addAction(self.delete_topic_action)
-        file_menu.addAction(self.edit_topic_action)
+        self.file_menu.addAction(self.import_file_action)
+        self.file_menu.addAction(self.export_file_action)
+        self.file_menu.addAction(self.new_topic_action)
+        self.file_menu.addAction(self.delete_topic_action)
+        self.file_menu.addAction(self.edit_topic_action)
+        self.file_menu.aboutToShow.connect(self.scheme) # پخش افکت صوتی
+
         # Terms Menu Actions
-        self.add_action = QAction("Add", self)
+        self.add_action = QAction("Add", self.soundgroup)
         self.add_action.triggered.connect(self.new_data)
-        self.delete_action = QAction("Delete", self)
+        self.delete_action = QAction("Delete", self.soundgroup)
         self.delete_action.triggered.connect(self.delete_data)
-        self.edit_action = QAction("Edit", self)
+        self.edit_action = QAction("Edit", self.soundgroup)
         self.edit_action.triggered.connect(self.edit_data)
-        terms_menu.addAction(self.add_action)
-        terms_menu.addAction(self.delete_action)
-        terms_menu.addAction(self.edit_action)
+        self.terms_menu.addAction(self.add_action)
+        self.terms_menu.addAction(self.delete_action)
+        self.terms_menu.addAction(self.edit_action)
+        self.terms_menu.aboutToShow.connect(self.scheme) # پخش افکت صوتی
+
         # Toolbar
         toolbar = QToolBar("My main toolbar")
         self.addToolBar(toolbar)
@@ -54,15 +65,18 @@ class TopicsWindow(QMainWindow):
         toolbar.addAction(self.add_action)
         toolbar.addAction(self.delete_action)
         toolbar.addAction(self.edit_action)
+
         # Lists
         self.topics_list = QListWidget()
         self.topics_list.itemActivated.connect(self.mark_load_cards)
         self.active_topic = None
         self.topics_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.topics_list.customContextMenuRequested.connect(self.topics_list_show_menu)
+        self.topics_list.currentItemChanged.connect(self.scheme)
         self.terms_list = QListWidget()
         self.terms_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.terms_list.customContextMenuRequested.connect(self.terms_list_show_menu)
+        self.terms_list.currentItemChanged.connect(self.scheme)
         # List Layout
         list_layout = QHBoxLayout()
         list_layout.addWidget(self.topics_list)
@@ -72,6 +86,7 @@ class TopicsWindow(QMainWindow):
         central_widget.setLayout(list_layout)
         self.setCentralWidget(central_widget)
         # start app
+        sound(self.sound_path +'topic_window.wav')
         self.load_topics()
         if self.flashcard_app.active_topic :
             item = self.topics_list.findItems(self.flashcard_app.active_topic, Qt.MatchFlag.MatchExactly)
@@ -100,7 +115,9 @@ class TopicsWindow(QMainWindow):
         self.flashcard_app.set_flashcard_set(topic)
         self.flashcard_app.initialize()
         self.topics_list.setCurrentItem(current)
-        self.play_effect('sounds\\checked.wav')
+        if self.flag_list_check:
+            sound(self.sound_path +'list_checked.wav')
+        self.flag_list_check = True
 
     def topics_list_show_menu(self, position):
         context_menu = QMenu(self)
@@ -229,6 +246,31 @@ class TopicsWindow(QMainWindow):
         if hasattr(self, 'new_data_dialog'):
             self.new_data_dialog.reject()
         event.accept()
+
+
+    def get_path_scheme(self, path):
+        self.sound_path = path
+
+    def scheme(self):
+        sender = self.sender()
+        if sender == self.soundgroup :
+            sound_name = 'generic_btn.wav'
+        elif sender == self.file_menu :
+            sound_name = 'menu.wav'
+        elif sender == self.terms_menu :
+            sound_name = 'menu.wav'
+        elif sender == self.terms_list and self.flag_terms_list is True:
+            sound_name = 'list.wav'
+        elif sender == self.topics_list and self.flag_topic_list is True:
+            sound_name = 'list.wav'
+        else:
+            self.flag_terms_list = True
+            self.flag_topic_list = True
+            return
+
+        sound(self.sound_path +sound_name)
+
+
 
 class NewTopic(QDialog):
     def __init__(self, title, old_topic= '', parent=None):
