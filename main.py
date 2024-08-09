@@ -14,6 +14,7 @@ from PIL import ImageQt
 from utils.sound import sound
 
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -218,8 +219,13 @@ class MainWindow(QMainWindow):
         self.topics_window.show()
         
     def closeEvent(self, event):
-        write_ini_file(config.INI_PATH,dark_mode= self.dark_mode, ask_definition= self.ask_definition, active_topic= self.flashcard_app.active_topic)
-        self.flashcard_app.save_flashcard_set()
+        if self.flashcard_app.active_topic is not None :
+            active_topic = self.flashcard_app.active_topic
+            self.flashcard_app.save_flashcard_set()
+        else:
+            active_topic = ''
+        write_ini_file(config.INI_PATH,dark_mode= self.dark_mode, ask_definition= self.ask_definition, active_topic= active_topic)
+    
         if hasattr(self, 'topics_window'):
             self.topics_window.close()
         event.accept()

@@ -29,11 +29,11 @@ def edit_db_file(old_filename, new_filename):
             os.rename(old_filename + ext, new_filename + ext)
 
 if __name__ == '__main__':
-    # import csv_files
-    # datas = csv_files.read_csv_file('files\\words.csv')
-    # write_db_file('test', datas )
+    import csv_files
+    datas = csv_files.read_csv_file('Vocabulary.csv')
+    write_db_file('database\\english', datas )
     # write_db_file('database\\farhad', {'iran': {'definition': 'tehran', 'learned': True}})
     # delete_data_from_db_file('database\\farhad', 'movie')
     # datas = read_db_file('database\\farhad')
     # print(datas)
-    delete_db_file('database\\jafar')
+    # delete_db_file('database\\jafar')
