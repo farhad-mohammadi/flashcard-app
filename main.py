@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QLabel, QCheckBox, QPushButton, QWidget, QTextEdit,
     QVBoxLayout, QHBoxLayout, QListWidget
 )
-from PyQt6.QtGui import QAction, QImage, QPixmap, QActionGroup
+from PyQt6.QtGui import QAction, QImage, QPixmap, QActionGroup, QKeySequence
 from PyQt6.QtCore import Qt
 from utils.flash_card import FlashCard, FlashCardSet, FlashCardApp
 from utils.text_into_image import create_text_image
@@ -95,8 +95,8 @@ class MainWindow(QMainWindow):
         self.learned_checkbox.setDisabled(True)
         self.learned_checkbox.stateChanged.connect(self.change_learned_status)
         self.learned_checkbox.checkStateChanged.connect (self.scheme)
-        self.learned_checkbox.setShortcut ('ctrl+l')
-        self.learned_checkbox.setAccessibleDescription ('ctrl+l')
+        self.learned_checkbox.setShortcut ('ALT+DOWN')
+        self.learned_checkbox.setAccessibleDescription ('alt+DOWN')
         
         # Buttons
         self.previous_button = QPushButton("Previous")
@@ -104,22 +104,22 @@ class MainWindow(QMainWindow):
         self.previous_button.setDisabled(True)
         self.previous_button.clicked.connect(self.previous_card)
         self.previous_button.clicked.connect (self.scheme)
-        self.previous_button.setShortcut ('ctrl+p')
-        self.previous_button.setAccessibleDescription ('ctrl+p')
+        self.previous_button.setShortcut (QKeySequence.StandardKey.Back)
+        self.previous_button.setAccessibleDescription ('alt+left arrow')
         self.flip_button = QPushButton('Flip')
         self.flip_button.setStatusTip("Flip the card")
         self.flip_button.setDisabled(True)
         self.flip_button.clicked.connect(self.flip_card)
         self.flip_button.clicked.connect (self.scheme)
-        self.flip_button.setShortcut ('ctrl+f')
-        self.flip_button.setAccessibleDescription ('ctrl+f')
+        self.flip_button.setShortcut ('alt+up')#+QKeySequence.StandardKey.MoveToPreviousLine)
+        self.flip_button.setAccessibleDescription ('alt+up arrow')
         self.next_button = QPushButton("Next")
         self.next_button.setStatusTip("Go to the next term")
         self.next_button.setDisabled(True)
         self.next_button.clicked.connect(self.next_card)
         self.next_button.clicked.connect (self.scheme)
-        self.next_button.setShortcut ('ctrl+n')
-        self.next_button.setAccessibleDescription ('ctrl+n')
+        self.next_button.setShortcut (QKeySequence.StandardKey.Forward)
+        self.next_button.setAccessibleDescription ('alt+right arrow')
         # Button Layout
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.previous_button)
